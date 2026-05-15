@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signatur Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f7; --surface: #fff; --surface2: #f8f9fa; --surface3: #eef0f3;
+  --border: #dde1e8; --border2: #c8cdd8;
+  --accent: #2563eb; --accent-light: #eff4ff; --accent-hover: #1d4ed8;
+  --text: #111827; --text2: #6b7280; --text3: #9ca3af;
+  --green: #10b981; --red: #ef4444; --yellow: #f59e0b;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08); --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter',sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; user-select: none; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 48px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; box-shadow: var(--shadow); z-index: 10; gap: 10px; overflow: visible; }
+header h1 { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; }
+header h1 span { color: var(--accent); }
+.header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.btn { font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text2); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+/* Language toggle */
+.lang-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.lang-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text2); font-family: 'Inter',sans-serif; transition: all 0.15s; }
+.lang-btn.active { background: var(--accent); color: #fff; }
+
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* LEFT */
+.left-panel { width: 355px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
+.panel-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface2); flex-shrink: 0; padding: 0 10px; }
+.panel-tab { flex: 1; padding: 9px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text3); cursor: pointer; text-align: center; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.panel-tab:hover:not(.active) { color: var(--text2); }
+.panel-content { flex: 1; overflow-y: auto; padding: 12px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+.drop-zone { border: 2px dashed var(--border2); border-radius: 9px; padding: 18px 14px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--surface2); margin-bottom: 12px; }
+.drop-zone:hover, .drop-zone.drag-active { border-color: var(--accent); background: var(--accent-light); }
+.drop-zone-icon { font-size: 20px; margin-bottom: 5px; }
+.drop-zone-text { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.drop-zone-text strong { color: var(--accent); }
+
+.image-list { display: flex; flex-direction: column; gap: 7px; }
+.image-card { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; transition: border-color 0.15s; }
+.image-card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.image-card.dragging { opacity: 0.4; }
+.card-header { display: flex; align-items: center; gap: 7px; padding: 7px 9px; background: var(--surface2); border-bottom: 1px solid var(--border); cursor: grab; }
+.card-header:active { cursor: grabbing; }
+.drag-handle { color: var(--text3); font-size: 12px; flex-shrink: 0; }
+.card-thumb { width: 36px; height: 24px; border-radius: 3px; object-fit: cover; background: var(--surface3); flex-shrink: 0; border: 1px solid var(--border); }
+.card-name { flex: 1; font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-pxdensity { font-size: 9px; font-family: 'DM Mono',monospace; color: var(--text3); flex-shrink: 0; background: var(--surface3); padding: 1px 5px; border-radius: 3px; }
+.card-remove { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; transition: color 0.15s; flex-shrink: 0; }
+.card-remove:hover { color: var(--red); }
+.card-body { padding: 9px; display: flex; flex-direction: column; gap: 6px; }
+
+.section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; margin-top: 2px; }
+.control-row { display: flex; align-items: center; gap: 7px; }
+.control-label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text2); width: 72px; flex-shrink: 0; }
+.control-value { font-family: 'DM Mono',monospace; font-size: 10px; color: var(--accent); width: 40px; text-align: right; flex-shrink: 0; }
+
+input[type=range] {
+  flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct,0%), var(--surface3) var(--pct,0%), var(--surface3) 100%);
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--accent), 0 1px 3px rgba(0,0,0,0.15); margin-top: -5px; }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid #fff; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; }
+
+.control-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 7px; font-size: 11px; font-family: 'Inter',sans-serif; color: var(--text); outline: none; transition: border-color 0.15s; user-select: text; }
+.control-input:focus { border-color: var(--accent); background: #fff; }
+.control-input::placeholder { color: var(--text3); }
+
+/* TOGGLE */
+.toggle-row { display: flex; align-items: center; gap: 7px; }
+.toggle-label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text2); width: 72px; flex-shrink: 0; }
+.toggle-switch { position: relative; width: 30px; height: 17px; flex-shrink: 0; cursor: pointer; display: inline-block; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track { position: absolute; inset: 0; background: var(--surface3); border-radius: 8px; border: 1px solid var(--border2); transition: all 0.2s; }
+.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); pointer-events: none; }
+.toggle-switch input:checked + .toggle-track { background: #6b7280; border-color: #6b7280; }
+.toggle-switch input:checked ~ .toggle-thumb { transform: translateX(13px); }
+.toggle-desc { font-size: 10px; color: var(--text3); flex: 1; }
+.toggle-desc.on { color: var(--accent); font-weight: 500; }
+
+/* RADIUS slider */
+.radius-slider-row { display: flex; align-items: center; gap: 7px; }
+
+/* URL BUTTONS */
+.url-type-row { display: flex; gap: 3px; margin-bottom: 4px; }
+.url-type-btn { flex: 1; padding: 4px 3px; font-size: 9px; font-weight: 700; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; transition: all 0.15s; text-align: center; font-family: 'Inter',sans-serif; letter-spacing: 0.03em; text-transform: uppercase; }
+.url-type-btn:hover { border-color: var(--accent); color: var(--accent); }
+.url-type-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.url-fields { display: flex; flex-direction: column; gap: 4px; }
+
+.layout-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 10px; margin-bottom: 9px; }
+.bg-swatches { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+.bg-swatch { width: 24px; height: 24px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+.bg-swatch.active, .bg-swatch:hover { border-color: var(--accent); transform: scale(1.1); }
+
+/* RIGHT */
+.right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); min-width: 0; }
+.preview-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0 14px; height: 40px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; box-shadow: var(--shadow); z-index: 5; }
+.preview-tabs { display: flex; gap: 2px; }
+.preview-tab { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 5px; cursor: pointer; color: var(--text3); transition: all 0.15s; border: none; background: transparent; font-family: 'Inter',sans-serif; }
+.preview-tab.active { background: var(--surface3); color: var(--text); }
+.preview-tab:hover:not(.active) { color: var(--text2); background: var(--surface2); }
+.preview-actions { display: flex; gap: 6px; align-items: center; }
+.copy-btn { font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 4px; margin-left: 4px; }
+.copy-btn:hover { border-color: var(--green); color: var(--green); }
+.copy-btn.copied { border-color: var(--green); color: var(--green); background: #f0fdf4; }
+
+/* PREVIEW BODY - both scroll directions */
+.preview-body { flex: 1; overflow: auto; }
+.visual-preview { padding: 28px; min-width: max-content; min-height: 100%; display: flex; align-items: flex-start; justify-content: flex-start; }
+.email-mock { background: #fff; border-radius: 10px; width: 700px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border); }
+.email-mock-header { background: #f9fafb; padding: 12px 18px; border-bottom: 1px solid #e5e7eb; }
+.email-mock-field { font-size: 12px; color: #6b7280; margin-bottom: 3px; font-family: Arial,sans-serif; display: flex; align-items: center; }
+.email-mock-field:last-child { margin-bottom: 0; }
+.email-mock-field strong { color: #374151; margin-right: 6px; flex-shrink: 0; }
+.email-mock-field input { border: none; background: transparent; font-size: 12px; color: #374151; font-family: Arial,sans-serif; outline: none; flex: 1; user-select: text; }
+.email-mock-field input::placeholder { color: #9ca3af; font-style: italic; }
+.email-mock-body { padding: 18px; }
+.email-mock-content { font-size: 13px; color: #374151; font-family: Arial,sans-serif; line-height: 1.6; margin-bottom: 14px; }
+.email-mock-divider { border: none; border-top: 1px solid #e5e7eb; margin: 12px 0; }
+#signature-preview-area { display: inline-block; }
+
+.code-view { display: none; min-height: 100%; }
+.code-content { font-family: 'DM Mono',monospace; font-size: 11.5px; line-height: 1.75; color: #374151; padding: 22px; white-space: pre-wrap; word-break: break-all; user-select: text; cursor: text; background: #fff; min-height: 100%; border-left: 3px solid var(--accent-light); }
+
+.status-bar { height: 22px; border-top: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; padding: 0 14px; gap: 14px; flex-shrink: 0; }
+.status-item { font-family: 'DM Mono',monospace; font-size: 9px; color: var(--text3); display: flex; align-items: center; gap: 3px; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+.status-dot.warning { background: var(--yellow); }
+.status-dot.error { background: var(--red); }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; color: var(--text3); gap: 7px; }
+.divider-line { border: none; border-top: 1px solid var(--border); margin: 7px 0; }
+input[type=file] { display: none; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.hl-tag { color: #be185d; } .hl-attr { color: #b45309; } .hl-val { color: #047857; } .hl-base64 { color: #1d4ed8; } .hl-comment { color: #9ca3af; font-style: italic; }
+.val-input { width: 46px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 5px; font-size: 11px; font-family: 'DM Mono',monospace; color: var(--accent); text-align: right; outline: none; transition: border-color 0.15s; user-select: text; -moz-appearance: textfield; }
+.val-input:focus { border-color: var(--accent); background: #fff; }
+.val-input::-webkit-outer-spin-button, .val-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Signatur <span>Builder</span></h1>
+  <div class="header-actions">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('de',this)">DE</button>
+      <button class="lang-btn" onclick="setLang('en',this)">EN</button>
+    </div>
+    <button class="btn btn-primary" onclick="generateAndUpdate()" data-i="generate" style="min-width:110px;">⚡ Generieren</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="left-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="switchTab('images',this)" data-i="tabImages">Grafiken</div>
+      <div class="panel-tab" onclick="switchTab('layout',this)" data-i="tabLayout">Layout</div>
+    </div>
+
+    <div class="panel-content" id="tab-images">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-zone-icon">🖼</div>
+        <div class="drop-zone-text" data-i="dropText"><strong>Klicken oder Dateien hierher ziehen</strong><br>PNG · JPG · GIF · WebP</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+      <div class="section-title" data-i="sectionGraphics">Grafiken</div>
+      <div class="image-list" id="imageList">
+        <div class="empty-state"><div style="font-size:24px;opacity:.4;">📭</div><div style="font-size:11px;" data-i="noGraphics">Noch keine Grafiken</div></div>
+      </div>
+    </div>
+
+    <div class="panel-content" id="tab-layout" style="display:none;">
+      <div class="section-title" data-i="sectionLayout">Signatur-Layout</div>
+      <div class="layout-card">
+        <div class="control-row">
+          <span class="control-label" data-i="lblWidth">Breite</span>
+          <input type="range" min="200" max="900" value="500" id="sigWidth" oninput="updateSliderFill(this); document.getElementById('sigWidthVal').textContent=this.value+'px'; generateAndUpdate()">
+          <span class="control-value" id="sigWidthVal">500px</span>
+        </div>
+        <div class="control-row" style="margin-top:7px;">
+          <span class="control-label" data-i="lblRowGap">Zeilen-Gap</span>
+          <input type="range" min="0" max="24" value="6" id="rowGap" oninput="updateSliderFill(this); document.getElementById('rowGapVal').textContent=this.value+'px'; generateAndUpdate()">
+          <span class="control-value" id="rowGapVal">6px</span>
+        </div>
+        <div class="control-row" style="margin-top:7px;">
+          <span class="control-label" data-i="lblColGap">Spalten-Gap</span>
+          <input type="range" min="0" max="32" value="8" id="colGap" oninput="updateSliderFill(this); document.getElementById('colGapVal').textContent=this.value+'px'; generateAndUpdate()">
+          <span class="control-value" id="colGapVal">8px</span>
+        </div>
+      </div>
+
+      <div class="section-title" data-i="sectionBg">Vorschau-Hintergrund</div>
+      <div class="layout-card">
+        <div class="bg-swatches">
+          <div class="bg-swatch" style="background:#fff;border:1px solid #dde1e8;" onclick="setPreviewBg('#fff',this)"></div>
+          <div class="bg-swatch active" style="background:#f3f4f6;" onclick="setPreviewBg('#f3f4f6',this)"></div>
+          <div class="bg-swatch" style="background:#fef9ef;" onclick="setPreviewBg('#fef9ef',this)"></div>
+          <div class="bg-swatch" style="background:#1e293b;" onclick="setPreviewBg('#1e293b',this)"></div>
+          <div class="bg-swatch" style="background:#0f172a;" onclick="setPreviewBg('#0f172a',this)"></div>
+        </div>
+      </div>
+
+      <div class="section-title" data-i="sectionEmail">E-Mail Vorschau</div>
+      <div class="layout-card" style="display:flex;flex-direction:column;gap:5px;">
+        <div class="control-row"><span class="control-label" data-i="lblFrom">Von</span><input class="control-input" id="mockFrom" placeholder="name@firma.ch" oninput="syncMock('From',this.value)"></div>
+        <div class="control-row"><span class="control-label" data-i="lblTo">An</span><input class="control-input" id="mockTo" placeholder="kunde@example.com" oninput="syncMock('To',this.value)"></div>
+        <div class="control-row"><span class="control-label" data-i="lblSubject">Betreff</span><input class="control-input" id="mockSubject" placeholder="Betreff der E-Mail" oninput="syncMock('Subject',this.value)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="preview-toolbar">
+      <div class="preview-tabs">
+        <button class="preview-tab active" onclick="switchPreview('visual',this)" data-i="tabPreview">Vorschau</button>
+<button class="copy-btn" id="copyBtn" onclick="copySignature()">⎘ <span data-i="copyBtn">Kopieren</span></button>
+      </div>
+    </div>
+    <div class="preview-body" id="previewBody">
+      <div id="view-visual" class="visual-preview">
+        <div class="email-mock" id="emailMock" style="background:#f3f4f6;">
+          <div class="email-mock-header">
+            <div class="email-mock-field"><strong data-i="mockFrom">Von:</strong><input id="dispFrom" placeholder="name@firma.ch" oninput="syncFromDisp('From',this.value)"></div>
+            <div class="email-mock-field"><strong data-i="mockTo">An:</strong><input id="dispTo" placeholder="kunde@example.com" oninput="syncFromDisp('To',this.value)"></div>
+            <div class="email-mock-field"><strong data-i="mockSubject">Betreff:</strong><input id="dispSubject" placeholder="Betreff" oninput="syncFromDisp('Subject',this.value)"></div>
+          </div>
+          <div class="email-mock-body" id="emailMockBody" style="background:#f3f4f6;">
+            <div class="email-mock-content" id="emailBody">Guten Tag,<br><br>vielen Dank für Ihre Anfrage. Gerne sende ich Ihnen weitere Informationen.<br><br>Mit freundlichen Grüssen</div>
+            <hr class="email-mock-divider">
+            <div id="signature-preview-area">
+              <div class="empty-state"><div style="font-size:24px;opacity:.4;">✉</div><div style="font-size:11px;text-align:center;margin-bottom:12px;" data-i="addGraphics">Grafiken hinzufügen &amp; klicke Generieren</div><button class="btn btn-primary" id="previewGenBtn" onclick="generateAndUpdate()" style="font-size:12px;display:none;">⚡ Generieren</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+<div id="view-code" style="display:none;"><div class="code-content" id="codeContent"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot" id="statusDot"></div></div>
+  <div class="status-item" data-i="statusGraphics">Grafiken: <span id="statusCount" style="color:var(--text);margin-left:2px;font-weight:600;">0</span></div>
+  <div class="status-item" data-i="statusSize">KB: <span id="statusSize" style="color:var(--text);margin-left:2px;font-weight:600;">—</span></div>
+  <div class="status-item">
+    <span id="charCountLabel" style="margin-right:3px;">Zeichen:</span>
+    <span id="charCount" style="font-weight:600;color:var(--text);">0</span>
+    
+  </div>
+</div>
+
+<script>
+// ---- I18N ----
+const i18n = {
+  de: {
+    download:'⬇ Download', generate:'⚡ Generieren', tabImages:'Grafiken', tabLayout:'Layout',
+    dropText:'<strong>Klicken oder Dateien hierher ziehen</strong><br>PNG · JPG · GIF · WebP',
+    sectionGraphics:'Grafiken', noGraphics:'Noch keine Grafiken',
+    sectionLayout:'Signatur-Layout', lblWidth:'Skalierung', lblRowGap:'Zeilen-Gap', lblColGap:'Spalten-Gap',
+    sectionBg:'Vorschau-Hintergrund', sectionEmail:'E-Mail Vorschau',
+    lblFrom:'Von', lblTo:'An', lblSubject:'Betreff',
+    tabPreview:'Vorschau', tabCode:'HTML Code', copyBtn:'Kopieren', copied:'Kopiert!',
+    mockFrom:'Von:', mockTo:'An:', mockSubject:'Betreff:',
+    addGraphics:'Grafiken hinzufügen &amp; <strong>Generieren</strong>',
+    statusGraphics:'Grafiken:', statusSize:'Grösse:',
+    statusReady:'', statusLarge:'', statusHuge:'',
+    charLabel:'Zeichen:',
+    // card labels
+    lQuality:'Qualität', lAlpha:'Modus', lAlphaOn:'JPG', lAlphaOff:'PNG',
+    lWidth:'Skalierung', lRadius:'Ecken-Rundung', lRadiusPx:'Ecken px', lRow:'Reihe',
+    lRowHint:'gleiche Nr. = nebeneinander',
+    lLink:'Verlinkung', lNone:'Keine', lURL:'URL', lMail:'Mail', lTel:'Tel',
+    pURL:'https://www.beispiel.ch', pURLTitle:'Link-Titel (optional)',
+    pEmail:'name@beispiel.ch', pSubject:'Betreff, z.B. Anfrage – Firma',
+    pTel:'+41 71 620 30 00',
+    emailBody:'Guten Tag,<br><br>vielen Dank für Ihre Anfrage. Gerne sende ich Ihnen weitere Informationen.<br><br>Mit freundlichen Grüssen',
+  },
+  en: {
+    download:'⬇ Download', generate:'⚡ Generate', tabImages:'Graphics', tabLayout:'Layout',
+    dropText:'<strong>Click or drag files here</strong><br>PNG · JPG · GIF · WebP',
+    sectionGraphics:'Graphics', noGraphics:'No graphics yet',
+    sectionLayout:'Signature Layout', lblWidth:'Scale', lblRowGap:'Row Gap', lblColGap:'Col Gap',
+    sectionBg:'Preview Background', sectionEmail:'Email Preview',
+    lblFrom:'From', lblTo:'To', lblSubject:'Subject',
+    tabPreview:'Preview', tabCode:'HTML Code', copyBtn:'Copy', copied:'Copied!',
+    mockFrom:'From:', mockTo:'To:', mockSubject:'Subject:',
+    addGraphics:'Add graphics &amp; <strong>Generate</strong>',
+    statusGraphics:'Graphics:', statusSize:'Size:',
+    statusReady:'', statusLarge:'', statusHuge:'',
+    charLabel:'Chars:',
+    lQuality:'Quality', lAlpha:'Modus', lAlphaOn:'JPG', lAlphaOff:'PNG',
+    lWidth:'Scale', lRadius:'Ecken-Rundung', lRadiusPx:'Corner px', lRow:'Row',
+    lRowHint:'same number = side by side',
+    lLink:'Link', lNone:'None', lURL:'URL', lMail:'Mail', lTel:'Tel',
+    pURL:'https://www.example.com', pURLTitle:'Link title (optional)',
+    pEmail:'name@example.com', pSubject:'Subject, e.g. Inquiry – Company',
+    pTel:'+1 555 000 0000',
+    emailBody:'Dear Sir/Madam,<br><br>Thank you for your inquiry. I would be happy to provide further information.<br><br>Kind regards',
+  }
+};
+let lang = 'de';
+
+function setLang(l, btn) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Update static i18n nodes
+  document.querySelectorAll('[data-i]').forEach(el => {
+    const key = el.getAttribute('data-i');
+    if (i18n[l][key] !== undefined) el.innerHTML = i18n[l][key];
+  });
+  document.getElementById('emailBody').innerHTML = i18n[l].emailBody;
+  const ccl=document.getElementById('charCountLabel');if(ccl)ccl.textContent=i18n[l].charLabel;
+  // Re-render cards
+  renderImageList();
+}
+
+// ---- SLIDER FILL ----
+function updateSliderFill(el) {
+  const min = +el.min||0, max = +el.max||100, val = +el.value;
+  el.style.setProperty('--pct', ((val-min)/(max-min)*100).toFixed(1)+'%');
+}
+
+// ---- FILE DROP ----
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-active'); handleFiles(e.dataTransfer.files); });
+
+let images = [], nextId = 1, generatedHTML = '';
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const tmp = new Image();
+      tmp.onload = () => {
+        const img = {
+          id: nextId++, name: file.name.replace(/\.[^.]+$/,''), file,
+          dataURL: ev.target.result, b64: null, mime: file.type,
+          naturalW: tmp.naturalWidth, naturalH: tmp.naturalHeight,
+          pixelDensity: (() => { const m = file.name.match(/@([\d.]+)x/i); return m ? parseFloat(m[1]) : 1; })(),
+          urlType:'none', urlHref:'', urlTitle:'', emailSubject:'Anfrage', telNumber:'',
+          quality: 85, resolution: 100, alpha: file.type === 'image/png', interpolation: 'high',
+          radiusPx: 0,   // 0 = off, >0 = corner px, 9999 = pill
+          radiusMode: 'off', // 'off' | 'corner' | 'pill'
+          row: images.length > 0 ? images[images.length-1].row : 1,
+          displayWidth: 0 // set below
+        };
+        img.displayWidth = Math.min(Math.round(img.naturalW / img.pixelDensity), 500);
+        images.push(img);
+        compressImage(img, () => { renderImageList(); updateStatus(); });
+      };
+      tmp.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function compressImage(img, cb) {
+  // GIF: embed directly without canvas to preserve animation
+  if (img.mime === 'image/gif') {
+    img.b64 = img.dataURL.split(',')[1];
+    img.compressedMime = 'image/gif';
+    if (cb) cb();
+    return;
+  }
+  const el = new Image();
+  el.onload = () => {
+    const canvas = document.createElement('canvas');
+    const maxW = parseInt(document.getElementById('sigWidth').value) * 1.5;
+    let w = el.naturalWidth, h = el.naturalHeight;
+    if (w > maxW) { h = Math.round(h * maxW / w); w = Math.round(maxW); }
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    // Apply interpolation method
+    const interp = img.interpolation || 'high';
+    if (interp === 'pixelated') {
+      ctx.imageSmoothingEnabled = false;
+    } else if (interp === 'lanczos') {
+      // Lanczos: multi-step downscaling for best quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = interp; // 'low' | 'medium' | 'high'
+    }
+    // JPG mode: fill white background before drawing
+    if (!img.alpha) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Lanczos: multi-step downscale for better quality
+    if (interp === 'lanczos' && el.naturalWidth > w * 1.5) {
+      let sw = el.naturalWidth, sh = el.naturalHeight;
+      let tempCanvas = document.createElement('canvas');
+      let tempCtx = tempCanvas.getContext('2d');
+      while (sw > w * 1.5) {
+        sw = Math.max(Math.round(sw * 0.5), w);
+        sh = Math.max(Math.round(sh * 0.5), Math.round(h));
+        tempCanvas.width = sw; tempCanvas.height = sh;
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = 'high';
+        tempCtx.drawImage(el, 0, 0, sw, sh);
+      }
+      ctx.drawImage(tempCanvas, 0, 0, w, h);
+    } else {
+      ctx.drawImage(el, 0, 0, w, h);
+    }
+    // Export
+    if (img.alpha) {
+      // PNG: use resolution slider to downscale
+      const resScale = (img.resolution || 100) / 100;
+      if (resScale < 0.99) {
+        const qCanvas = document.createElement('canvas');
+        qCanvas.width = Math.max(1, Math.round(w * resScale));
+        qCanvas.height = Math.max(1, Math.round(h * resScale));
+        const qCtx = qCanvas.getContext('2d');
+        qCtx.drawImage(canvas, 0, 0, qCanvas.width, qCanvas.height);
+        img.b64 = qCanvas.toDataURL('image/png').split(',')[1];
+      } else {
+        img.b64 = canvas.toDataURL('image/png').split(',')[1];
+      }
+      img.compressedMime = 'image/png';
+    } else {
+      img.b64 = canvas.toDataURL('image/jpeg', img.quality / 100).split(',')[1];
+      img.compressedMime = 'image/jpeg';
+    }
+    if (cb) cb();
+  };
+  el.src = img.dataURL;
+}
+
+// ---- RENDER CARDS ----
+function renderImageList() {
+  const T = i18n[lang];
+  // Show generate button in preview if images exist but no HTML generated yet
+  const previewGenBtn = document.getElementById('previewGenBtn');
+  if (previewGenBtn) previewGenBtn.style.display = images.length > 0 && !generatedHTML ? 'inline-block' : 'none';
+  const list = document.getElementById('imageList');
+  if (!images.length) {
+    list.innerHTML = `<div class="empty-state"><div style="font-size:24px;opacity:.4;">📭</div><div style="font-size:11px;">${T.noGraphics}</div></div>`;
+    return;
+  }
+  list.innerHTML = images.map(img => {
+    const density = img.displayWidth ? Math.round((img.naturalW/img.displayWidth)*10)/10 : '—';
+    const qPct = ((img.quality-1)/99*100).toFixed(1);
+    const wPct = ((img.displayWidth-50)/850*100).toFixed(1);
+    // Radius slider: 0–100px for corner, pill = 9999
+    const rSliderVal = img.radiusMode==='pill' ? 100 : img.radiusPx;
+    const rPct = (rSliderVal/100*100).toFixed(1);
+    const rLabel = img.radiusMode==='pill' ? '💊' : img.radiusPx+'px';
+
+    return `
+    <div class="image-card" data-id="${img.id}" style="${img.mime==='image/gif'&&img.b64&&img.b64.length>200000?'border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,0.15);':img.mime==='image/gif'&&img.b64&&img.b64.length>150000?'border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,0.15);':''}">
+      <div class="card-header" draggable="true"
+        ondragstart="dragStart(event,${img.id})" ondragover="dragOver(event,${img.id})"
+        ondrop="dragDrop(event,${img.id})" ondragleave="dragLeave(event)">
+        <span class="drag-handle">⠿</span>
+        <img class="card-thumb" src="${img.dataURL}" alt="">
+        <span class="card-name" title="${img.name}">${img.name}</span>
+        <span style="font-size:9px;color:var(--text3);flex-shrink:0;">@</span>
+        <input type="number" class="val-input" style="width:38px;font-size:9px;padding:1px 3px;" min="0.5" max="4" step="0.1" value="${img.pixelDensity}"
+          onchange="const v=Math.max(0.5,Math.min(4,+this.value||1));setImgVal(${img.id},'pixelDensity',v);setImgVal(${img.id},'displayWidth',Math.min(Math.round(img.naturalW/v),900));renderImageList();generateAndUpdate()"
+          onclick="event.stopPropagation()" title="Pixel-Dichte">
+        <span style="font-size:9px;color:var(--text3);flex-shrink:0;">x</span>
+        ${img.mime==='image/gif'&&img.b64&&img.b64.length>200000?'<span style="font-size:9px;font-weight:700;color:#ef4444;flex-shrink:0;">zu gross</span>':img.mime==='image/gif'&&img.b64&&img.b64.length>150000?'<span style="font-size:9px;font-weight:700;color:#f59e0b;flex-shrink:0;">gross</span>':''}
+        <button class="card-remove" onclick="removeImage(${img.id})">×</button>
+      </div>
+      <div class="card-body">
+
+        <div class="control-row" style="${img.mime==='image/gif'||img.alpha?'display:none;':''}" title="${img.mime==='image/gif'?'Nicht verfügbar für GIF':''}">
+          <span class="control-label">${T.lQuality}</span>
+          <input type="range" min="1" max="100" value="${img.quality}" style="--pct:${qPct}%" id="qslider${img.id}" ${img.mime==='image/gif'?'disabled':''}
+            oninput="updateSliderFill(this);setImgVal(${img.id},'quality',+this.value);document.getElementById('qnum${img.id}').value=this.value;recompressAndUpdate(${img.id})">
+          <input type="number" id="qnum${img.id}" class="val-input" min="1" max="100" value="${img.quality}" ${img.mime==='image/gif'?'disabled':''}
+            onchange="const v=Math.min(100,Math.max(1,+this.value||1));this.value=v;setImgVal(${img.id},'quality',v);const s=document.getElementById('qslider${img.id}');s.value=v;updateSliderFill(s);recompressAndUpdate(${img.id})">
+        </div>
+
+        <div class="control-row" id="resrow${img.id}" style="${img.alpha?'':'display:none;'}">
+          <span class="control-label">Auflösung</span>
+          <input type="range" min="10" max="100" value="${img.resolution||100}" style="--pct:${((img.resolution||100)-10)/90*100}%" id="reslider${img.id}"
+            oninput="updateSliderFill(this);setImgVal(${img.id},'resolution',+this.value);document.getElementById('resnum${img.id}').value=this.value;recompressAndUpdate(${img.id})">
+          <input type="number" id="resnum${img.id}" class="val-input" min="10" max="100" value="${img.resolution||100}"
+            onchange="const v=Math.min(100,Math.max(10,+this.value||100));this.value=v;setImgVal(${img.id},'resolution',v);const s=document.getElementById('reslider${img.id}');s.value=v;updateSliderFill(s);recompressAndUpdate(${img.id})">
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">Methode</span>
+          <select class="control-input" style="font-size:10px;padding:3px 6px;"
+            onchange="setImgVal(${img.id},'interpolation',this.value);recompressAndUpdate(${img.id})">
+            <option value="pixelated" ${img.interpolation==='pixelated'?'selected':''}>Pixelwiederholung (Hart)</option>
+            <option value="low" ${img.interpolation==='low'?'selected':''}>Bilinear</option>
+            <option value="medium" ${img.interpolation==='medium'?'selected':''}>Glätten</option>
+            <option value="high" ${img.interpolation==='high'?'selected':''}>Bikubisch (Standard)</option>
+            <option value="lanczos" ${img.interpolation==='lanczos'?'selected':''}>Lanczos (Beste)</option>
+          </select>
+        </div>
+
+        <div class="toggle-row" style="align-items:center;gap:6px;${img.mime==='image/gif'?'opacity:0.35;pointer-events:none;':''}" title="${img.mime==='image/gif'?'Nicht verfügbar für GIF':''}">
+          <span class="control-label">Modus</span>
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#f59e0b;color:#fff;flex-shrink:0;opacity:${img.alpha?'0.3':'1'};">JPG</span>
+          <label class="toggle-switch" style="flex-shrink:0;cursor:pointer;">
+            <input type="checkbox" ${img.alpha?'checked':''} onchange="setImgVal(${img.id},'alpha',this.checked);renderImageList();recompressAndUpdate(${img.id})">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb" style="transform:${img.alpha?'translateX(13px)':'none'};"></div>
+          </label>
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#10b981;color:#fff;flex-shrink:0;opacity:${img.alpha?'1':'0.3'};">PNG</span>
+          ${img.mime==='image/gif'?'<span style="font-size:9px;color:var(--text3);margin-left:4px;">GIF</span>':''}
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">${T.lWidth}</span>
+          <input type="range" min="50" max="900" value="${img.displayWidth}" style="--pct:${wPct}%" id="wslider${img.id}"
+            oninput="updateSliderFill(this);setImgVal(${img.id},'displayWidth',+this.value);document.getElementById('wnum${img.id}').value=this.value;updateDensityBadge(${img.id},+this.value);generateAndUpdate()">
+          <input type="number" id="wnum${img.id}" class="val-input" min="50" max="900" value="${img.displayWidth}"
+            onchange="const v=Math.min(900,Math.max(50,+this.value||50));this.value=v;setImgVal(${img.id},'displayWidth',v);const s=document.getElementById('wslider${img.id}');s.value=v;updateSliderFill(s);updateDensityBadge(${img.id},v);generateAndUpdate()">
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">${T.lRadius}</span>
+          <input type="range" min="0" max="100" value="${rSliderVal}" style="--pct:${rPct}%" id="rslider${img.id}"
+            oninput="updateSliderFill(this);handleRadiusSlider(${img.id},+this.value);const rv=getRadiusNumVal(${img.id});document.getElementById('rnum${img.id}').value=rv;document.getElementById('rlbl${img.id}').textContent=getRadiusLabel(${img.id})">
+          <input type="number" id="rnum${img.id}" class="val-input" min="0" max="100" value="${rSliderVal==='💊'?100:rSliderVal}"
+            onchange="const v=Math.min(100,Math.max(0,+this.value||0));this.value=v;handleRadiusSlider(${img.id},v);const s=document.getElementById('rslider${img.id}');s.value=v;updateSliderFill(s);document.getElementById('rlbl${img.id}').textContent=getRadiusLabel(${img.id})">
+          <span class="control-value" id="rlbl${img.id}" style="width:20px;">${rLabel}</span>
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">${T.lRow}</span>
+          <input type="number" class="control-input" style="width:48px;flex:none;" min="1" max="20" value="${img.row}"
+            oninput="setImgVal(${img.id},'row',+this.value);generateAndUpdate()">
+          <span style="font-size:9px;color:var(--text3);margin-left:4px;">${T.lRowHint}</span>
+        </div>
+
+        <hr class="divider-line">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:3px;">${T.lLink}</div>
+        <div class="url-type-row">
+          <button class="url-type-btn ${img.urlType==='none'?'active':''}" onclick="setUrlType(${img.id},'none',this)">${T.lNone}</button>
+          <button class="url-type-btn ${img.urlType==='url'?'active':''}" onclick="setUrlType(${img.id},'url',this)">🔗 ${T.lURL}</button>
+          <button class="url-type-btn ${img.urlType==='email'?'active':''}" onclick="setUrlType(${img.id},'email',this)">✉ ${T.lMail}</button>
+          <button class="url-type-btn ${img.urlType==='tel'?'active':''}" onclick="setUrlType(${img.id},'tel',this)">📞 ${T.lTel}</button>
+        </div>
+        ${buildUrlSection(img, T)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function handleRadiusSlider(id, val) {
+  const img = images.find(i => i.id===id);
+  if (!img) return;
+  if (val === 0) { img.radiusMode = 'off'; img.radiusPx = 0; }
+  else if (val >= 100) { img.radiusMode = 'pill'; img.radiusPx = 9999; }
+  else { img.radiusMode = 'corner'; img.radiusPx = val; }
+  generateAndUpdate();
+}
+
+function getRadiusLabel(id) {
+  const img = images.find(i => i.id===id);
+  if (!img) return '0px';
+  if (img.radiusMode==='off') return '0';
+  if (img.radiusMode==='pill') return '💊';
+  return img.radiusPx+'px';
+}
+
+function getRadiusNumVal(id) {
+  const img = images.find(i => i.id===id);
+  if (!img) return 0;
+  if (img.radiusMode==='off') return 0;
+  if (img.radiusMode==='pill') return 100;
+  return img.radiusPx;
+}
+
+function buildUrlSection(img, T) {
+  if (img.urlType==='none') return '';
+  if (img.urlType==='url') return `<div class="url-fields">
+    <input class="control-input" placeholder="${T.pURL}" value="${img.urlHref}" oninput="setImgVal(${img.id},'urlHref',this.value);generateAndUpdate()">
+    <input class="control-input" placeholder="${T.pURLTitle}" value="${img.urlTitle}" oninput="setImgVal(${img.id},'urlTitle',this.value);generateAndUpdate()">
+  </div>`;
+  if (img.urlType==='email') return `<div class="url-fields">
+    <input class="control-input" placeholder="${T.pEmail}" value="${img.urlHref}" oninput="setImgVal(${img.id},'urlHref',this.value);generateAndUpdate()">
+    <input class="control-input" placeholder="${T.pSubject}" value="${img.emailSubject}" oninput="setImgVal(${img.id},'emailSubject',this.value);generateAndUpdate()">
+  </div>`;
+  if (img.urlType==='tel') return `<div class="url-fields">
+    <input class="control-input" placeholder="${T.pTel}" value="${img.telNumber}" oninput="setImgVal(${img.id},'telNumber',this.value);generateAndUpdate()">
+  </div>`;
+  return '';
+}
+
+function setUrlType(id, type) { setImgVal(id,'urlType',type); renderImageList(); generateAndUpdate(); }
+function setImgVal(id,key,val) { const img=images.find(i=>i.id===id); if(img) img[key]=val; }
+function recompressAndUpdate(id) { const img=images.find(i=>i.id===id); if(img) compressImage(img,()=>generateAndUpdate()); }
+function updateDensityBadge(id,nw) {
+  const img=images.find(i=>i.id===id); if(!img) return;
+  const d=Math.round((img.naturalW/nw)*10)/10;
+  const card=document.querySelector(`[data-id="${id}"]`);
+  if(card){const b=card.querySelector('.card-pxdensity');if(b)b.textContent='@'+d+'x';}
+}
+function removeImage(id) { images=images.filter(i=>i.id!==id); renderImageList(); generateAndUpdate(); updateStatus(); }
+
+// ---- DRAG ----
+let dragId=null;
+function dragStart(e,id){ dragId=id; document.querySelector(`[data-id="${id}"]`)?.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function dragOver(e,id){ e.preventDefault(); e.stopPropagation(); if(id!==dragId) document.querySelector(`[data-id="${id}"]`)?.classList.add('drag-over'); }
+function dragLeave(e){ e.currentTarget.closest?.('.image-card')?.classList.remove('drag-over'); }
+function dragDrop(e,id){
+  e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll('.image-card').forEach(c=>c.classList.remove('drag-over','dragging'));
+  if(id===dragId) return;
+  const fi=images.findIndex(i=>i.id===dragId), ti=images.findIndex(i=>i.id===id);
+  const [m]=images.splice(fi,1); images.splice(ti,0,m);
+  renderImageList(); generateAndUpdate();
+}
+
+// ---- GENERATE ----
+function generateAndUpdate() {
+  const T=i18n[lang];
+  if(!images.length){
+    generatedHTML='';
+    document.getElementById('signature-preview-area').innerHTML=`<div class="empty-state"><div style="font-size:24px;opacity:.4;">✉</div><div style="font-size:11px;text-align:center;margin-bottom:12px;">${T.addGraphics}</div><button class="btn btn-primary" onclick="generateAndUpdate()" style="font-size:12px;">⚡ ${T.generate.replace('⚡ ','')}</button></div>`;
+    document.getElementById('codeContent').innerHTML=`<span class="hl-comment">/* ${T.noGraphics} */</span>`;
+    updateStatus(); return;
+  }
+  const pending=images.filter(i=>!i.b64);
+  if(pending.length){let p=pending.length; pending.forEach(img=>compressImage(img,()=>{p--;if(!p)buildHTML();}));}
+  else buildHTML();
+}
+
+function buildHTML() {
+  const colGap=document.getElementById('colGap').value;
+  const rowGap=document.getElementById('rowGap').value;
+  const rows={};
+  images.forEach(img=>{const r=img.row||1;if(!rows[r])rows[r]=[];rows[r].push(img);});
+  const keys=Object.keys(rows).sort((a,b)=>+a-+b);
+  let html=`<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,sans-serif;">`;
+  keys.forEach((rk,ri)=>{
+    const rowImgs=rows[rk], isLast=ri===keys.length-1, pb=isLast?0:rowGap;
+    html+=`\n  <tr><td style="padding-bottom:${pb}px;">`;
+    if(rowImgs.length===1){ html+=buildImgEl(rowImgs[0]); }
+    else {
+      html+=`\n    <table cellpadding="0" cellspacing="0" border="0"><tr>`;
+      rowImgs.forEach((img,ci)=>{ const pr=ci<rowImgs.length-1?colGap:0; html+=`\n      <td style="padding-right:${pr}px;">${buildImgEl(img)}</td>`; });
+      html+=`\n    </tr></table>`;
+    }
+    html+=`\n  </td></tr>`;
+  });
+  html+=`\n</table>`;
+  generatedHTML=html;
+  document.getElementById('signature-preview-area').innerHTML=html;
+  document.getElementById('codeContent').innerHTML=syntaxHighlight(html);
+  updateStatus();
+}
+
+function getRadiusStyleStr(img) {
+  if(img.radiusMode==='off') return '';
+  if(img.radiusMode==='pill') return 'border-radius:9999px;';
+  return `border-radius:${img.radiusPx}px;`;
+}
+
+function buildImgEl(img) {
+  const w=img.displayWidth;
+  const rad=getRadiusStyleStr(img);
+  const ratio = img.naturalH / img.naturalW;
+  const h = Math.round(w * ratio);
+  const imgTag=`<img src="data:${img.compressedMime||img.mime};base64,${img.b64}" alt="${img.name}" width="${w}" height="${h}" style="display:block;width:${w}px;height:auto;border:0;">`; 
+  const wrapStyle=rad?`display:inline-block;overflow:hidden;${rad}`:`display:inline-block;`;
+  if(img.urlType==='none') return rad?`<div style="${wrapStyle}">${imgTag}</div>`:imgTag;
+  let href='',title='',target=' target="_blank"';
+  if(img.urlType==='url'){ href=img.urlHref||'#'; title=img.urlTitle?` title="${img.urlTitle}"`:''; }
+  else if(img.urlType==='email'){ const s=img.emailSubject?encodeURIComponent(img.emailSubject):''; href=`mailto:${img.urlHref}${s?'?subject='+s:''}`; target=''; }
+  else if(img.urlType==='tel'){ href=`tel:${img.telNumber.replace(/\s/g,'')}`; target=''; }
+  return `<a href="${href}"${target}${title} style="${wrapStyle}">${imgTag}</a>`;
+}
+
+function syntaxHighlight(code) {
+  return code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/base64,[A-Za-z0-9+/=]{20,}/g,m=>{const kb=Math.round(m.length*0.75/1024);return `<span class="hl-base64">base64,<span style="opacity:0.5">[${kb}KB]</span></span>`;})
+    .replace(/(&lt;\/?[a-zA-Z][a-zA-Z0-9]*)/g,'<span class="hl-tag">$1</span>');
+}
+
+// ---- COPY: copies rendered signature as rich HTML into clipboard ----
+function copySignature() {
+  const T=i18n[lang];
+  const area=document.getElementById('signature-preview-area');
+  if(!generatedHTML){ return; }
+  // Use ClipboardItem with text/html blob so Gmail pastes rich content
+  const blob=new Blob([generatedHTML],{type:'text/html'});
+  if(navigator.clipboard && window.ClipboardItem) {
+    navigator.clipboard.write([new ClipboardItem({'text/html':blob,'text/plain':new Blob([generatedHTML],{type:'text/plain'})})]).then(()=>{
+      showCopied(T);
+    }).catch(()=>{ fallbackCopy(T); });
+  } else { fallbackCopy(T); }
+}
+
+function fallbackCopy(T) {
+  // Select the rendered preview element content
+  const area=document.getElementById('signature-preview-area');
+  const range=document.createRange();
+  range.selectNodeContents(area);
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('copy');
+  sel.removeAllRanges();
+  showCopied(T);
+}
+
+function showCopied(T) {
+  const btn=document.getElementById('copyBtn');
+  btn.classList.add('copied'); btn.innerHTML=`✓ ${T.copied}`;
+  setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=`⎘ <span data-i="copyBtn">${T.copyBtn}</span>`;},2000);
+}
+
+// download removed
+
+function switchTab(tab,el){
+  document.getElementById('tab-images').style.display=tab==='images'?'':'none';
+  document.getElementById('tab-layout').style.display=tab==='layout'?'':'none';
+  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchPreview(view,el){
+  document.getElementById('view-visual').style.display=view==='visual'?'flex':'none';
+  document.getElementById('view-code').style.display=view==='code'?'block':'none';
+  document.querySelectorAll('.preview-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function setPreviewBg(color,el){
+  document.getElementById('emailMock').style.background=color;
+  document.getElementById('emailMockBody').style.background=color;
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+function syncMock(f,v){document.getElementById('disp'+f).value=v;}
+function syncFromDisp(f,v){document.getElementById('mock'+f).value=v;}
+
+function updateStatus(){
+  const T=i18n[lang];
+  document.getElementById('statusCount').textContent=images.length;
+  const charEl=document.getElementById('charCount');
+  const dotEl=document.getElementById('statusDot');
+  if(generatedHTML){
+    const kb=Math.round(generatedHTML.length*0.75/1024);
+    document.getElementById('statusSize').textContent=kb;
+    const chars=generatedHTML.length;
+    charEl.textContent=chars.toLocaleString('de-CH');
+    const overLimit=chars>200000;
+    const nearLimit=chars>170000;
+    charEl.style.color=overLimit?'var(--red)':nearLimit?'var(--yellow)':'var(--text)';
+    dotEl.className='status-dot'+(kb>300?' error':kb>150?' warning':'');
+  } else {
+    document.getElementById('statusSize').textContent='—';
+    charEl.textContent='0';
+    charEl.style.color='var(--text)';
+    dotEl.className='status-dot';
+  }
+}
+
+window.addEventListener('load',()=>{
+  ['sigWidth','rowGap','colGap'].forEach(id=>{const el=document.getElementById(id);if(el)updateSliderFill(el);});
+});
+</script>
+</body>
+</html>
